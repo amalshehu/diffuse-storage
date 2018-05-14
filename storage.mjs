@@ -2,12 +2,12 @@ import fs from 'fs'
 
 class Storage {
   constructor() {
-    this.DB = new Map()
+    this.DB = this.syncStorage() || new Map()
   }
 
   setItem(key, value) {
     this.DB.set(key, value)
-    fs.writeFileSync('./data.json', JSON.stringify(this.DB), 'utf-8')
+    fs.writeFileSync('./data.json', JSON.stringify(Array.from(this.DB.entries())), 'utf-8')
   }
 
   getItem(key) {
@@ -18,17 +18,18 @@ class Storage {
     return this.DB.delete(key)
   }
 
+  syncStorage() {
+    let data
+    try {
+      data = fs.readFileSync('./data.json')
+      return new Map(JSON.parse(data))
+    } catch (e) {
+      console.log('Error in file')
+    }
+  }
+
 }
 
 const database = new Storage()
-database.setItem('user', 123)
-
-let config
-try {
-  config = fs.readFileSync('./data.json')
-  config = JSON.parse(config)
-  console.log('data', config);
-
-} catch (e) {
-  console.log('Error in file')
-}
+// database.setItem('user', 123)
+console.log(database);

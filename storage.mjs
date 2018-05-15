@@ -7,7 +7,11 @@ class Storage {
 
   setItem(key, value) {
     this.DB.set(key, value)
-    fs.writeFileSync('./data.json', JSON.stringify(Array.from(this.DB.entries())), 'utf-8')
+    fs.writeFileSync(
+      './data.json',
+      JSON.stringify(Array.from(this.DB.entries())),
+      'utf-8'
+    )
   }
 
   getItem(key) {

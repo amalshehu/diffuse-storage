@@ -1,2 +1,2 @@
-# diffuse-storage
+# ProtonDB
 A distributed key-value store.

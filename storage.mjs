@@ -42,6 +42,12 @@ database.setItem('Deadpool', {
   year: 2016
 })
 
+const mapToJson = (data) => {
+  return JSON.stringify([...data].map(([key, obj]) => ({
+    key,
+    ...obj
+  })))
+}
 }
 
 const database = new Storage()

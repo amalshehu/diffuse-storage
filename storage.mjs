@@ -1,4 +1,5 @@
 import fs from 'fs'
+import http from 'http'
 
 class Storage {
   constructor() {
@@ -31,6 +32,8 @@ class Storage {
       console.log('Error in file')
     }
   }
+}
+
 const database = new Storage()
 
 database.setItem('Superman', {
@@ -48,8 +51,31 @@ const mapToJson = (data) => {
     ...obj
   })))
 }
-}
 
-const database = new Storage()
-// database.setItem('user', 123)
-console.log(database);
+// Server
+const server = http.createServer()
+server.on('request', (req, res) => {
+  switch (req.url) {
+    case '/set':
+      res.writeHead(201) // 201: CREATED
+      res.end('Created #4k3hhjg45kqtj67')
+      break
+    case '/get':
+      res.writeHead(200, { // 200: SUCCESS
+        'Content-Type': 'application/json'
+      })
+      res.end(mapToJson(database.DB))
+      break
+    case '/delete':
+      res.writeHead(204) // 204: NO CONTENT
+      res.end()
+      break
+    default:
+      res.writeHead(404) // 404: NOT FOUND
+      res.end()
+  }
+})
+server.listen(8000)
+
+// Print URL for accessing server
+console.log('Server running at http://127.0.0.1:8000/')

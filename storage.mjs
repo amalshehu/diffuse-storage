@@ -31,6 +31,16 @@ class Storage {
       console.log('Error in file')
     }
   }
+const database = new Storage()
+
+database.setItem('Superman', {
+  publisher: 'DC Comics',
+  year: 1933
+})
+database.setItem('Deadpool', {
+  publisher: 'Marvel Comics',
+  year: 2016
+})
 
 }
 

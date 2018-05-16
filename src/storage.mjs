@@ -1,14 +1,19 @@
 import fs from 'fs'
+import path from 'path'
 
 export default class Storage {
   constructor() {
+    this.dirName = path.join(process.cwd(), 'src/db')
+    fs.watch(this.dirName, (event, fileName) => {
+      console.log(`FileWatcher:`, event, fileName);
+    })
     this.DB = this.syncStorage() || new Map()
   }
 
   setItem(key, value) {
     this.DB.set(key, value)
     fs.writeFileSync(
-      'src/db/data.kvstore',
+      `${this.dirName}/data.kvstore`,
       JSON.stringify(Array.from(this.DB.entries())),
       'utf-8'
     )
@@ -26,7 +31,7 @@ export default class Storage {
   syncStorage() {
     let data
     try {
-      data = fs.readFileSync('src/db/data.kvstore')
+      data = fs.readFileSync(`${this.dirName}/data.kvstore`)
       return new Map(JSON.parse(data))
     } catch (e) {
       console.log('Error in file')

@@ -1,6 +1,8 @@
 import http from 'http'
 import Storage from './storage'
-import { mapToJson } from './util'
+import {
+  mapToJson
+} from './util'
 
 const database = new Storage()
 
@@ -10,6 +12,7 @@ database.setItem('Superman', {
 })
 database.setItem('Deadpool', {
   publisher: 'Marvel Comics',
+
   year: 2016
 })
 

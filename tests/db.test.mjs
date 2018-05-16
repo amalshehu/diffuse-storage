@@ -14,13 +14,13 @@ import Storage from './../src/storage'
 const database = new Storage()
 
 database.setItem('Superman', {
-    publisher: 'DC Comics',
-    year: 1933
+  publisher: 'DC Comics',
+  year: 1988
 })
-database.setItem('Deadpool', {
-    publisher: 'Marvel Comics',
+// database.setItem('Deadpool', {
+//   publisher: 'Marvel Comics',
 
-    year: 2016
-})
+//   year: 2016
+// })
 
-console.log(database.syncStorage())
+console.log(database.DB)

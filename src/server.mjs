@@ -5,17 +5,6 @@ import {
 } from './util'
 
 const database = new Storage()
-
-database.setItem('Superman', {
-  publisher: 'DC Comics',
-  year: 1933
-})
-database.setItem('Deadpool', {
-  publisher: 'Marvel Comics',
-
-  year: 2016
-})
-
 // Server
 const server = http.createServer()
 server.on('request', (req, res) => {

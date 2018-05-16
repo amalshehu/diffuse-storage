@@ -1,0 +1,25 @@
+{
+  "name": "proton-db",
+  "version": "1.0.0",
+  "description": "Distributed key value store",
+  "main": "server.mjs",
+  "directories": {
+    "test": "tests"
+  },
+  "scripts": {
+    "test": "npm test"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/amalshehu/diffuse-storage.git"
+  },
+  "author": "Amal Shehu",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/amalshehu/diffuse-storage/issues"
+  },
+  "homepage": "https://github.com/amalshehu/diffuse-storage#readme",
+  "devDependencies": {
+    "jest": "^22.4.3"
+  }
+}

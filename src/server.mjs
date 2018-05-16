@@ -1,8 +1,6 @@
 import http from 'http'
 import Storage from './storage'
-import {
-  mapToJson
-} from './util'
+import { mapToJson } from './util'
 
 const database = new Storage()
 // Server
@@ -10,8 +8,20 @@ const server = http.createServer()
 server.on('request', (req, res) => {
   switch (req.url) {
     case '/set':
-      res.writeHead(201) // 201: CREATED
-      res.end('Created #4k3hhjg45kqtj67')
+      if (req.method === 'POST') {
+        let body = ''
+        req.on('data', chunk => {
+          body += chunk.toString() // convert Buffer to string
+        })
+        req.on('end', () => {
+          const data = JSON.parse(body)
+          Object.keys(data).map(i => [i, data[i]])
+          console.log(data)
+          res.writeHead(201) // 201: CREATED
+          database.setItem(JSON.parse(body))
+          res.end('Created #4k3hhjg45kqtj67')
+        })
+      }
       break
     case '/get':
       res.writeHead(200, {

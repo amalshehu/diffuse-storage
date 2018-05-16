@@ -6,9 +6,9 @@ export default class Storage {
   }
 
   setItem(key, value) {
-    // this.DB.set(key, value)
+    this.DB.set(key, value)
     fs.writeFileSync(
-      './data.kvstore',
+      'src/db/data.kvstore',
       JSON.stringify(Array.from(this.DB.entries())),
       'utf-8'
     )
@@ -26,7 +26,7 @@ export default class Storage {
   syncStorage() {
     let data
     try {
-      data = fs.readFileSync('./data.kvstore')
+      data = fs.readFileSync('src/db/data.kvstore')
       return new Map(JSON.parse(data))
     } catch (e) {
       console.log('Error in file')

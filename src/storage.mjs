@@ -1,32 +1,25 @@
 import fs from 'fs'
-import path from 'path'
 import { logWithTime } from './util'
 
 export default class Storage {
   constructor() {
     this.dirName = process.cwd() + '/src/db'
-    this.readStream = fs
+    this.DB = new Map()
+    fs
       .createReadStream(`${this.dirName}/data.kvstore`)
       .on('data', async data => {
         if (data) {
           this.DB = await new Map(JSON.parse(data))
-          console.log('D', this.DB)
         }
       })
-    this.DB = new Map()
-    // this.writeStream = fs.createWriteStream(`${this.dirName}/data.kvstore`, {
-    //   flags: 'w'
-    // })
-    fs.watch(this.dirName, (event, fileName) => {
-      logWithTime(`${event} ${fileName}`)
-    })
   }
 
   async setItem(key, value) {
     this.DB.set(key, value)
     const writer = fs.createWriteStream(`${this.dirName}/data.kvstore`)
     writer.write(JSON.stringify(Array.from(this.DB.entries())))
-    writer.close(console.error('Disk write process completed'))
+    // writer.end()
+    // writer.close(console.error('Disk write process completed'))
     let x = await this.DB.get(key)
     return [key, x]
   }

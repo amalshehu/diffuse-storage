@@ -20,9 +20,10 @@ server.on('request', (req, res) => {
         req.on('end', () => {
           const data = JSON.parse(body)
           const value = Object.keys(data).map(i => [i, data[i]])
-          console.log(value)
           res.writeHead(201) // 201: CREATED
-          database.setItem(...value[0])
+          database.setItem(...value[0]).then(result => {
+            // console.log('res', result)
+          })
           res.end('Created #4k3hhjg45kqtj67')
         })
       }

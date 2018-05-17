@@ -7,6 +7,10 @@ const database = new Storage()
 const server = http.createServer()
 server.on('request', (req, res) => {
   switch (req.url) {
+    case '/':
+      res.writeHead(200) // 200: OK
+      res.end()
+      break
     case '/set':
       if (req.method === 'POST') {
         let body = ''

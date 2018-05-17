@@ -27,43 +27,45 @@
 
 const http = require('http')
 
-var postData = JSON.stringify({
-  Superman: { publisher: 'DC Comics', year: 2000 }
-})
+function request(postData) {
+  return new Promise(resolve => {
+    const options = {
+      host: '127.0.0.1',
+      port: 8000,
+      path: '/set',
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Content-Length': postData.length
+      }
+    }
 
-var options = {
-  host: '127.0.0.1',
-  port: 8000,
-  path: '/set',
-  method: 'POST',
-  headers: {
-    'Content-Type': 'application/json',
-    'Content-Length': postData.length
-  }
-}
+    const request = http.request(options, response => {
+      let data = ''
+      response.on('data', _data => (data += _data))
+      response.on('end', () => resolve(data))
+    })
 
-var req = http.request(options, res => {
-  console.log('statusCode:', res.statusCode)
-  console.log('headers:', res.headers)
-
-  res.on('data', chunk => {
-    console.log(`BODY: ${chunk}`)
+    request.write(postData)
+    request.end()
   })
-})
-req.on('error', e => {
-  console.error(`problem with request: ${e.message}`)
+}
+const d1 = JSON.stringify({
+  Superman: { publisher: 'DC Comics', year: 1888 }
 })
 
-// write data to request body
-req.write(postData)
-req.end()
-
-const dataPromise = req
+const d2 = JSON.stringify({
+  Superman: { publisher: 'DC Comics', year: 2006 }
+})
 
 test.concurrent('one', async () => {
-  const data = await dataPromise
+  const data = await request(d1)
+  console.log('Out', data)
+
+  expect(data).toEqual('Created #4k3hhjg45kqtj67')
 })
 
 test.concurrent('two', async () => {
-  const data = await dataPromise
+  const data = await request(d2)
+  expect(data).toEqual('Created #4k3hhjg4kqtj67')
 })

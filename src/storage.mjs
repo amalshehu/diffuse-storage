@@ -22,12 +22,13 @@ export default class Storage {
     })
   }
 
-  setItem(key, value) {
+  async setItem(key, value) {
     this.DB.set(key, value)
-    fs
-      .createWriteStream(`${this.dirName}/data.kvstore`)
-      .write(JSON.stringify(Array.from(this.DB.entries())))
-    console.log('Item stored')
+    const writer = fs.createWriteStream(`${this.dirName}/data.kvstore`)
+    writer.write(JSON.stringify(Array.from(this.DB.entries())))
+    writer.close(console.error('Disk write process completed'))
+    let x = await this.DB.get(key)
+    return [key, x]
   }
 
   getItem(key) {

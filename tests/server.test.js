@@ -50,22 +50,48 @@ function request(postData) {
     request.end()
   })
 }
-const d1 = JSON.stringify({
-  Superman: { publisher: 'DC Comics', year: 1888 }
+// const d1 = JSON.stringify({
+//   Superman: { publisher: 'DC Comics', year: 1888 }
+// })
+
+// const d2 = JSON.stringify({
+//   Superman: { publisher: 'DC Comics', year: 1966 }
+// })
+
+// const d3 = JSON.stringify({
+//   Deadpool: {
+//     publisher: 'Marvel Comics',
+//     year: 2010,
+//     about:
+//       'Mercenary Wade Wilson, subjected to an experiment to heal himself of cancer, obtains healing powers, but at the cost of becoming awfully disfigured. He then adopts the alter ego of Deadpool.'
+//   }
+// })
+
+var faker = require('faker')
+describe('Database write speed test', () => {
+  for (let i = 0; i < 100; i++) {
+    test.concurrent('Concurrent Test Execution', async () => {
+      let randomName = faker.name.findName()
+      let randomText = faker.lorem.paragraphs()
+      let d1 = {}
+      d1.superman = { publisher: 'DC Comics', year: 1 + i }
+      const data = await request(JSON.stringify(d1))
+      expect(data).toBeTruthy()
+    })
+  }
 })
 
-const d2 = JSON.stringify({
-  Superman: { publisher: 'DC Comics', year: 2006 }
-})
+// test.concurrent('one', async () => {
+//   const data = await request(d1)
+//   expect(data).toEqual('Created #4k3hhjg45kqtj67')
+// })
 
-test.concurrent('one', async () => {
-  const data = await request(d1)
-  console.log('Out', data)
+// test.concurrent('two', async () => {
+//   const data = await request(d2)
+//   expect(data).toEqual('Created #4k3hhjg45kqtj67')
+// })
 
-  expect(data).toEqual('Created #4k3hhjg45kqtj67')
-})
-
-test.concurrent('two', async () => {
-  const data = await request(d2)
-  expect(data).toEqual('Created #4k3hhjg4kqtj67')
-})
+// test.concurrent('Medium data', async () => {
+//   const data = await request(d3)
+//   expect(data).toEqual('Created #4k3hhjg45kqtj67')
+// })

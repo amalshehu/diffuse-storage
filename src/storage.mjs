@@ -18,13 +18,15 @@ export default class Storage {
     this.DB.set(key, value)
     const writer = fs.createWriteStream(`${this.dirName}/data.kvstore`)
     writer.write(JSON.stringify(Array.from(this.DB.entries())))
-    // writer.end()
+    writer.end()
     // writer.close(console.error('Disk write process completed'))
+    this.syncStorage()
     let x = await this.DB.get(key)
     return [key, x]
   }
 
   getItem(key) {
+    this.syncStorage()
     return this.DB.get(key)
   }
 
@@ -37,6 +39,6 @@ export default class Storage {
     this.readStream.on('data', function(d) {
       data = d
     })
-    return data ? new Map(JSON.parse(data)) : new Map()
+    this.DB = data ? new Map(JSON.parse(data)) : new Map()
   }
 }

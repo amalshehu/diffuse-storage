@@ -12,7 +12,7 @@ export const logWithTime = message => {
 }
 export const log = (message, code) => {
   const colors = {
-    r: '\x1b[41m',
+    r: '\x1b[11m',
     y: '\x1b[36m',
     g: '\x1b[32m',
     mg: '\x1b[31m',

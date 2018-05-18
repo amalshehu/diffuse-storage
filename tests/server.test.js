@@ -37,11 +37,11 @@ function request(postData) {
 // t4 -> P1 & P2 write to disk
 
 describe('DISK READ/WRITE TESTS', () => {
-  for (let i = 0; i < 158; i++) {
+  for (let i = 0; i < 1000; i++) {
     // let randomName = faker.name.findName()
     // let randomText = faker.lorem.paragraphs()
 
-    test('Concurrent Test Execution 1', async () => {
+    test(`Concurrent Test Execution ${i + 1}`, async () => {
       let d2 = {}
       d2.superman = { publisher: 'Marvel Comics', year: 1 + i }
       const data = await request(JSON.stringify(d2))

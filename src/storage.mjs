@@ -1,17 +1,16 @@
 import fs from 'fs'
-import { logWithTime } from './util'
+import { logWithTime, log } from './util'
 
 export default class Storage {
   constructor() {
     this.dirName = process.cwd() + '/src/db'
     this.DB = new Map()
-    fs
-      .createReadStream(`${this.dirName}/data.kvstore`)
-      .on('data', async data => {
-        if (data) {
-          this.DB = await new Map(JSON.parse(data))
-        }
+    this.syncStorage()
+    if (fs.existsSync(`${this.dirName}/data.kvstore`)) {
+      fs.watch(this.dirName, (event, fileName) => {
+        this.syncStorage()
       })
+    }
   }
 
   async setItem(key, value) {
@@ -20,13 +19,11 @@ export default class Storage {
     writer.write(JSON.stringify(Array.from(this.DB.entries())))
     writer.end()
     // writer.close(console.error('Disk write process completed'))
-    this.syncStorage()
     let x = await this.DB.get(key)
     return [key, x]
   }
 
   getItem(key) {
-    this.syncStorage()
     return this.DB.get(key)
   }
 
@@ -35,10 +32,20 @@ export default class Storage {
   }
 
   syncStorage() {
-    let data
-    this.readStream.on('data', function(d) {
-      data = d
-    })
-    this.DB = data ? new Map(JSON.parse(data)) : new Map()
+    this.reader = fs.createReadStream(`${this.dirName}/data.kvstore`)
+    this.reader
+      .on('data', data => {
+        this.DB = new Map(JSON.parse(data))
+        log('Synchronize store...', 'mg')
+      })
+      .on('error', err => {
+        console.error('Error receiving data', err) // READ if there was an error receiving data.
+      })
+      .on('end', () => {
+        log('Storage sync complete.', 'g') // READ fires when no more data will be provided.
+      })
+      .on('close', () => {
+        log('Stream closed! Reader going to sleep.', 'b') // WRITEABLE not all streams emit this.
+      })
   }
 }

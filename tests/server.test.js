@@ -35,15 +35,18 @@ function request(postData) {
 // t2 -> P1 writes first, P2 will overwrite
 // t3 -> P2 writes first, P1 will overwrite
 // t4 -> P1 & P2 write to disk
+// const dataSet = []
+// for (let i = 0; i < 2000; i++) {
+//   let randomName = faker.name.findName()
+//   let randomText = faker.lorem.paragraphs()
+//   dataSet.push([randomName, { publisher: 'Marvel Comics', desc: randomText }])
+// }
 
 describe('DISK READ/WRITE TESTS', () => {
-  for (let i = 0; i < 1000; i++) {
-    // let randomName = faker.name.findName()
-    // let randomText = faker.lorem.paragraphs()
-
-    test(`Concurrent Test Execution ${i + 1}`, async () => {
+  for (let i = 0; i < 2000; i++) {
+    test.concurrent(`Concurrent Test Execution ${i + 1}`, async () => {
       let d2 = {}
-      d2.superman = { publisher: 'Marvel Comics', year: 1 + i }
+      d2[`key${i}`] = { publisher: 'Marvel Comics', year: 1 + i }
       const data = await request(JSON.stringify(d2))
       expect(data).toBeTruthy()
     })

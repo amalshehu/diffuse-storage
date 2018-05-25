@@ -45,38 +45,41 @@ export default class Storage extends EventEmitter {
       flags: 'a'
     })
   }
-  syncStorage() {
+  updateInmemory(line) {
+    let obj = JSON.parse(line)
+    if (obj.val === undefined) {
+      if (this.docs.has(obj.key)) {
+      }
+      this.docs.delete(obj.key)
+    } else {
+      if (!this.docs.has(obj.key)) {
+        this.docs.set(obj.key, obj.val)
+      }
+    }
+  }
+  processIncomingBuffer(buf) {
     let buffers = ''
+    buffers += buf
+    if (buf.lastIndexOf('\n') == -1) return
+    const buffer = buffers.split('\n')
+    buffers = buffer.pop()
+    buffer.forEach(line => {
+      if (!line) {
+        this.emit('error', new Error('Empty lines in database'))
+        return
+      }
+      this.updateInmemory(line)
+      return
+    })
+  }
+  syncStorage() {
     this.reader
       .on('data', buf => {
-        buffers += buf
-        if (buf.lastIndexOf('\n') == -1) return
-        const buffer = buffers.split('\n')
-        buffers = buffer.pop()
-        buffer.forEach(line => {
-          if (!line) {
-            this.emit('error', new Error('Empty lines in database'))
-            return
-          }
-          let obj = JSON.parse(line)
-          if (obj.val === undefined) {
-            if (this.docs.has(obj.key)) {
-            }
-            this.docs.delete(obj.key)
-          } else {
-            if (!this.docs.has(obj.key)) {
-              this.docs.set(obj.key, obj.val)
-            }
-          }
-          return
-        })
+        this.processIncomingBuffer(buf)
       })
-      .on('error', err => {
-        console.error('Error receiving data', err)
-      })
-      .on('end', () => {
-        // log('Storage sync complete.', 'g') // READ fires when no more data will be provided.
-      })
+      .on('error', err => console.error('Error receiving data', err))
+      .on('end', () => {}) // log('Storage sync complete.', 'g') // READ fires when no more data will be provided.
+
     this.writer
       .on('drain', () => {
         this.writeDrain()

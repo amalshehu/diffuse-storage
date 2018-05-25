@@ -5,10 +5,7 @@ import { mapToJson, log } from './util'
 import Storage from './storage'
 const numCPUs = os.cpus().length
 
-const database = new Storage()
-
-// database.setItem('abc', 123)
-// database.setItem('abc', 123)
+const database = new Storage() // Can pass fileName, optional.
 
 setTimeout(() => {
   database.setItem('a', 15)

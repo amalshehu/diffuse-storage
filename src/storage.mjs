@@ -15,17 +15,14 @@ export default class Storage extends EventEmitter {
   }
 
   setItem(key, value, callback) {
-    if (this.docs.has(key) && value === this.docs.get(key)) {
-      return
-    } else {
-      this.docs.set(key, value)
-      if (!callback) {
-        this.queue.push(key)
-      } else {
-        this.queue.push([key, callback])
-      }
-    }
-    this.flush()
+    value === undefined ? this.docs.delete(key) : this.docs.set(key, value)
+    !callback ? this.queue.push(key) : this.queue.push([key, callback])
+    this.flushHandler()
+  }
+
+  flushHandler() {
+    if (this.isFlushing || !this.queue.length) return
+    this.flushToStorage()
   }
 
   getItem(key) {
@@ -33,8 +30,9 @@ export default class Storage extends EventEmitter {
   }
 
   removeItem(key) {
-    return this.docs.delete(key)
+    return this.docs.set(key, undefined)
   }
+
   initFileStreams() {
     this.reader = fs.createReadStream(this.path, {
       encoding: 'utf-8',
@@ -42,21 +40,60 @@ export default class Storage extends EventEmitter {
     })
     this.writer = fs.createWriteStream(this.path, {
       encoding: 'utf-8',
-      flags: 'a'
+      flags: 'a' // 'a' Append only
     })
   }
-  updateInmemory(line) {
-    let obj = JSON.parse(line)
-    if (obj.val === undefined) {
-      if (this.docs.has(obj.key)) {
-      }
-      this.docs.delete(obj.key)
-    } else {
-      if (!this.docs.has(obj.key)) {
-        this.docs.set(obj.key, obj.val)
-      }
-    }
+
+  syncStorage() {
+    this.reader
+      .on('data', buf => this.processIncomingBuffer(buf))
+      .on('error', err => console.error('Error receiving data', err))
+      .on('end', () => log('Storage sync complete.', 'g'))
+    this.writer.on('drain', () => this.writeDrain())
   }
+
+  writeDrain() {
+    this.isFlushing = false
+    !this.queue.length ? this.emit('drain') : this.flushHandler()
+  }
+
+  flushToStorage() {
+    const length = this.queue.length
+    let chunkLength = 0
+    let dataStr = ``
+    let key
+    let cbs = []
+    this.isFlushing = true
+    for (let i = 0; i < length; i++) {
+      key = this.queue[i]
+      if (Array.isArray(key)) {
+        cbs.push(key[1])
+        key = key[0]
+      }
+      dataStr += `{${key}: ${this.docs.get(key)}}\n`
+      chunkLength++
+      if (chunkLength < this.writerPack && i < length - 1) continue
+      this.initFlush(cbs, dataStr)
+      dataStr = ''
+      chunkLength = 0
+      cbs = []
+    }
+    this.queue = []
+  }
+
+  initFlush(cbs, data) {
+    const isDrained = this.writer.write(data, err => {
+      if (isDrained) {
+        this.writeDrain()
+      }
+      if (!cbs.length && err) {
+        this.emit('error', err)
+        return
+      }
+      this.handleCallbacks(err, cbs)
+    })
+  }
+
   processIncomingBuffer(buf) {
     let buffers = ''
     buffers += buf
@@ -72,88 +109,23 @@ export default class Storage extends EventEmitter {
       return
     })
   }
-  syncStorage() {
-    this.reader
-      .on('data', buf => {
-        this.processIncomingBuffer(buf)
-      })
-      .on('error', err => console.error('Error receiving data', err))
-      .on('end', () => {}) // log('Storage sync complete.', 'g') // READ fires when no more data will be provided.
 
-    this.writer
-      .on('drain', () => {
-        this.writeDrain()
-      })
-      .on('open', fd => {
-        this.fdWrite = fd
-      })
-  }
-  flush() {
-    if (this.isFlushing || !this.queue.length) {
-      return
-    }
-    this.flushToStorage()
-  }
-  writeDrain() {
-    this.isFlushing = false
-
-    if (!this.queue.length) {
-      this.emit('drain')
-    } else {
-      this.flush()
-    }
-  }
-  initFlush(cbs, data) {
-    let isDrained
-    if (!this.path) {
-      process.nextTick(() => {
-        this.handleCallbacks(null, cbs)
-        this.writerDrain()
-      })
-      return
-    }
-    isDrained = this.writer.write(data, err => {
-      if (isDrained) {
-        this.writeDrain()
-      }
-      if (!cbs.length && err) {
-        this.emit('error', err)
-        return
-      }
-      this.handleCallbacks(err, cbs)
-    })
-  }
   handleCallbacks(err, cbs) {
     while (cbs.length) {
       cbs.shift()(err)
     }
   }
-  flushToStorage() {
-    const length = this.queue.length
-    let chunkLength = 0
-    let dataStr = ``
-    let key
-    let cbs = []
 
-    this.isFlushing = true
-    for (let i = 0; i < length; i++) {
-      key = this.queue[i]
-      if (Array.isArray(key)) {
-        cbs.push(key[1])
-        key = key[0]
+  updateInmemory(data) {
+    let entry = JSON.parse(data)
+    key = [...Object.keys(entry)]
+
+    if (entry[key] === undefined) {
+      this.docs.delete(key)
+    } else {
+      if (!this.docs.has(key)) {
+        this.docs.set(key, entry[key])
       }
-
-      dataStr += `${JSON.stringify({ key, val: this.docs.get(key) })}\n`
-      chunkLength++
-
-      if (chunkLength < this.writerPack && i < length - 1) {
-        continue
-      }
-      this.initFlush(cbs, dataStr)
-      dataStr = ''
-      chunkLength = 0
-      cbs = []
     }
-    this.queue = []
   }
 }

@@ -1,43 +1,70 @@
 import fs from 'fs'
 import { logWithTime, log } from './util'
+import EventEmitter from 'events'
 
-export default class Storage {
-  constructor() {
-    this.dirName = process.cwd() + '/src/db'
+export default class Storage extends EventEmitter {
+  constructor(fileName = 'storage.db') {
+    super()
+    this.path = process.cwd() + '/src/db/' + fileName
     this.DB = new Map()
-
+    this.docs = new Map()
+    this.writerPack = 1024
+    this.queue = []
     this.syncStorage()
-    // if (fs.existsSync(`${this.dirName}/data.kvstore`)) {
-    //   fs.watch(this.dirName, (event, fileName) => {
-    //     this.syncStorage()
-    //   })
-    // }
   }
 
-  async setItem(key, value) {
-    this.DB.set(key, value)
-    const writer = fs.createWriteStream(`${this.dirName}/data.kvstore`)
-    writer.write(JSON.stringify(Array.from(this.DB.entries())))
-    // writer.end()
-    // writer.close(console.error('Disk write process completed'))
-    let x = await this.DB.get(key)
-    return [key, x]
+  setItem(key, value, callback) {
+    if (this.docs.has(key) && value === this.docs.get(key)) {
+      return
+    } else {
+      this.docs.set(key, value)
+      if (!callback) {
+        this.queue.push(key)
+      } else {
+        this.queue.push([key, callback])
+      }
+    }
+    this.flush()
   }
 
   getItem(key) {
-    return this.DB.get(key)
+    return this.docs.get(key)
   }
 
   removeItem(key) {
-    return this.DB.del(key)
+    return this.docs.delete(key)
   }
 
   syncStorage() {
-    this.reader = fs.createReadStream(`${this.dirName}/data.kvstore`)
+    let buffers = ''
+    this.reader = fs.createReadStream(this.path, {
+      encoding: 'utf-8',
+      flags: 'r'
+    })
+
     this.reader
-      .on('data', data => {
-        this.DB = new Map(JSON.parse(data))
-        // log('Synchronize store...', 'mg')
+      .on('data', buf => {
+        buffers += buf
+        if (buf.lastIndexOf('\n') == -1) return
+        const buffer = buffers.split('\n')
+        buffers = buffer.pop()
+        buffer.forEach(line => {
+          if (!line) {
+            this.emit('error', new Error('Empty lines in database'))
+            return
+          }
+          let obj = JSON.parse(line)
+          if (obj.val === undefined) {
+            if (this.docs.has(obj.key)) {
+            }
+            this.docs.delete(obj.key)
+          } else {
+            if (!this.docs.has(obj.key)) {
+              this.docs.set(obj.key, obj.val)
+            }
+          }
+          return ''
+        })
       })
       .on('error', err => {
         console.error('Error receiving data', err) // READ if there was an error receiving data.
@@ -45,8 +72,93 @@ export default class Storage {
       .on('end', () => {
         // log('Storage sync complete.', 'g') // READ fires when no more data will be provided.
       })
-      .on('close', () => {
-        // log('Stream closed! Reader going to sleep.', 'b') // WRITEABLE not all streams emit this.
+
+    this.writer = fs.createWriteStream(this.path, {
+      encoding: 'utf-8',
+      flags: 'a'
+    })
+
+    this.writer
+      .on('drain', () => {
+        this.writeDrain()
       })
+      .on('open', fd => {
+        this.fdWrite = fd
+      })
+  }
+  flush() {
+    if (this.isFlushing || !this.queue.length) {
+      return
+    }
+    this.flushToStorage()
+  }
+  writeDrain() {
+    this.isFlushing = false
+
+    if (!this.queue.length) {
+      this.emit('drain')
+    } else {
+      this.flush()
+    }
+  }
+  flushToStorage() {
+    const length = this.queue.length
+    let chunkLength = 0
+    let dataStr = ``
+    let key
+    let cbs = []
+
+    this.isFlushing = true
+
+    function callbacks(err, cbs) {
+      while (cbs.length) {
+        cbs.shift()(err)
+      }
+    }
+
+    for (let i = 0; i < length; i++) {
+      key = this.queue[i]
+      if (Array.isArray(key)) {
+        cbs.push(key[1])
+        key = key[0]
+      }
+
+      dataStr += `${JSON.stringify({ key, val: this.docs.get(key) })}\n`
+      chunkLength++
+
+      if (chunkLength < this.writerPack && i < length - 1) {
+        continue
+      }
+
+      ;(cbs => {
+        let isDrained
+
+        if (!this.path) {
+          process.nextTick(() => {
+            callbacks(null, cbs)
+            this.writerDrain()
+          })
+          return
+        }
+
+        isDrained = this.writer.write(dataStr, err => {
+          if (isDrained) {
+            this.writeDrain()
+          }
+
+          if (!cbs.length && err) {
+            this.emit('error', err)
+            return
+          }
+
+          callbacks(err, cbs)
+        })
+      })(cbs)
+
+      dataStr = ''
+      chunkLength = 0
+      cbs = []
+    }
+    this.queue = []
   }
 }

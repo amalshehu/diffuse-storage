@@ -6,16 +6,14 @@ export default class Storage extends EventEmitter {
   constructor(fileName = 'storage.db') {
     super()
     this.path = process.cwd() + '/src/db/' + fileName
-    this.DB = new Map()
     this.docs = new Map()
-    this.writerPack = 1024
     this.queue = []
     this.initFileStreams()
     this.syncStorage()
   }
 
   setItem(key, value) {
-    value === undefined ? this.docs.delete(key) : this.docs.set(key, value)
+    this.docs.set(key, value)
     this.queue.push(key)
     this.flushHandler()
   }
@@ -30,9 +28,8 @@ export default class Storage extends EventEmitter {
   }
 
   removeItem(key) {
-    return this.docs.set(key, undefined)
+    this.setItem(key, undefined)
   }
-
   initFileStreams() {
     this.reader = fs.createReadStream(this.path, {
       encoding: 'utf-8',
@@ -59,18 +56,14 @@ export default class Storage extends EventEmitter {
 
   flushToStorage() {
     const length = this.queue.length
-    let chunkLength = 0
     let entry = ``
     let key
     this.isFlushing = true
     for (let i = 0; i < length; i++) {
       key = this.queue[i]
-      entry += `{${key}: ${this.docs.get(key)}}\n`
-      chunkLength++
-      if (chunkLength < this.writerPack && i < length - 1) continue
+      entry += `${JSON.stringify({ key, val: this.docs.get(key) })}\n`
       this.initFlush(entry)
-      entry = ''
-      chunkLength = 0
+      entry = ``
     }
     this.queue = []
   }
@@ -101,14 +94,8 @@ export default class Storage extends EventEmitter {
 
   updateInmemory(data) {
     let entry = JSON.parse(data)
-    key = [...Object.keys(entry)]
-
-    if (entry[key] === undefined) {
-      this.docs.delete(key)
-    } else {
-      if (!this.docs.has(key)) {
-        this.docs.set(key, entry[key])
-      }
+    if (entry.val != undefined) {
+      this.docs.set(entry.key, entry.val)
     }
   }
 }

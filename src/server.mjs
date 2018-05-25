@@ -3,9 +3,18 @@ import cluster from 'cluster'
 import os from 'os'
 import { mapToJson, log } from './util'
 import Storage from './storage'
+const numCPUs = os.cpus().length
 
 const database = new Storage()
-const numCPUs = os.cpus().length
+
+// database.setItem('abc', 123)
+// database.setItem('abc', 123)
+
+setTimeout(() => {
+  database.setItem('abc', 100000)
+  console.log('key: abc', 'value', database.getItem('abc'))
+  // database.setItem('absc', 124)
+}, 200)
 
 // if (cluster.isMaster) {
 //   log(`Master ${process.pid} is running`, 'mg')
@@ -35,9 +44,7 @@ server.on('request', (req, res) => {
           const data = JSON.parse(body)
           const value = Object.keys(data).map(i => [i, data[i]])
           res.writeHead(201) // 201: CREATED
-          database.setItem(...value[0]).then(result => {
-            // console.log('res', result)
-          })
+          database.setItem(...value[0])
           res.end('INSERT e0d123e5f316bef78bfdf5a008837577 OK') // Mock
         })
       }
@@ -48,7 +55,7 @@ server.on('request', (req, res) => {
         'Content-Type': 'application/json'
       })
 
-      let d = mapToJson(database.DB)
+      let d = JSON.stringify(database.getItem('abc'))
       res.end(d)
       // res.end(mapToJson(database.DB))
       break

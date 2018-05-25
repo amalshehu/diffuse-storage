@@ -10,6 +10,7 @@ export default class Storage extends EventEmitter {
     this.docs = new Map()
     this.writerPack = 1024
     this.queue = []
+    this.initFileStreams()
     this.syncStorage()
   }
 
@@ -34,14 +35,18 @@ export default class Storage extends EventEmitter {
   removeItem(key) {
     return this.docs.delete(key)
   }
-
-  syncStorage() {
-    let buffers = ''
+  initFileStreams() {
     this.reader = fs.createReadStream(this.path, {
       encoding: 'utf-8',
       flags: 'r'
     })
-
+    this.writer = fs.createWriteStream(this.path, {
+      encoding: 'utf-8',
+      flags: 'a'
+    })
+  }
+  syncStorage() {
+    let buffers = ''
     this.reader
       .on('data', buf => {
         buffers += buf
@@ -63,21 +68,15 @@ export default class Storage extends EventEmitter {
               this.docs.set(obj.key, obj.val)
             }
           }
-          return ''
+          return
         })
       })
       .on('error', err => {
-        console.error('Error receiving data', err) // READ if there was an error receiving data.
+        console.error('Error receiving data', err)
       })
       .on('end', () => {
         // log('Storage sync complete.', 'g') // READ fires when no more data will be provided.
       })
-
-    this.writer = fs.createWriteStream(this.path, {
-      encoding: 'utf-8',
-      flags: 'a'
-    })
-
     this.writer
       .on('drain', () => {
         this.writeDrain()
@@ -101,6 +100,31 @@ export default class Storage extends EventEmitter {
       this.flush()
     }
   }
+  initFlush(cbs, data) {
+    let isDrained
+    if (!this.path) {
+      process.nextTick(() => {
+        this.handleCallbacks(null, cbs)
+        this.writerDrain()
+      })
+      return
+    }
+    isDrained = this.writer.write(data, err => {
+      if (isDrained) {
+        this.writeDrain()
+      }
+      if (!cbs.length && err) {
+        this.emit('error', err)
+        return
+      }
+      this.handleCallbacks(err, cbs)
+    })
+  }
+  handleCallbacks(err, cbs) {
+    while (cbs.length) {
+      cbs.shift()(err)
+    }
+  }
   flushToStorage() {
     const length = this.queue.length
     let chunkLength = 0
@@ -109,13 +133,6 @@ export default class Storage extends EventEmitter {
     let cbs = []
 
     this.isFlushing = true
-
-    function callbacks(err, cbs) {
-      while (cbs.length) {
-        cbs.shift()(err)
-      }
-    }
-
     for (let i = 0; i < length; i++) {
       key = this.queue[i]
       if (Array.isArray(key)) {
@@ -129,32 +146,7 @@ export default class Storage extends EventEmitter {
       if (chunkLength < this.writerPack && i < length - 1) {
         continue
       }
-
-      ;(cbs => {
-        let isDrained
-
-        if (!this.path) {
-          process.nextTick(() => {
-            callbacks(null, cbs)
-            this.writerDrain()
-          })
-          return
-        }
-
-        isDrained = this.writer.write(dataStr, err => {
-          if (isDrained) {
-            this.writeDrain()
-          }
-
-          if (!cbs.length && err) {
-            this.emit('error', err)
-            return
-          }
-
-          callbacks(err, cbs)
-        })
-      })(cbs)
-
+      this.initFlush(cbs, dataStr)
       dataStr = ''
       chunkLength = 0
       cbs = []

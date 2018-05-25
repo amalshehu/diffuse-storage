@@ -1,1 +1,6 @@
-{"key":"abc","val":100000}
+{"key":"a","val":1}
+{"key":"b","val":2}
+{"key":"c","val":3}
+{"key":"abc","val":6}
+{"key":"a","val":15}
+{"key":"a","val":15}

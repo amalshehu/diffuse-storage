@@ -11,9 +11,13 @@ const database = new Storage()
 // database.setItem('abc', 123)
 
 setTimeout(() => {
-  database.setItem('abc', 100000)
+  database.setItem('a', 15)
+  database.setItem('b', 2)
+  database.setItem('c', 3)
+  database.setItem('abc', 6)
+
   console.log('key: abc', 'value', database.getItem('abc'))
-  // database.setItem('absc', 124)
+  console.log('All data', database.docs)
 }, 200)
 
 // if (cluster.isMaster) {

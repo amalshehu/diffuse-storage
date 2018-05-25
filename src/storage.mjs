@@ -14,9 +14,9 @@ export default class Storage extends EventEmitter {
     this.syncStorage()
   }
 
-  setItem(key, value, callback) {
+  setItem(key, value) {
     value === undefined ? this.docs.delete(key) : this.docs.set(key, value)
-    !callback ? this.queue.push(key) : this.queue.push([key, callback])
+    this.queue.push(key)
     this.flushHandler()
   }
 
@@ -49,10 +49,10 @@ export default class Storage extends EventEmitter {
       .on('data', buf => this.processIncomingBuffer(buf))
       .on('error', err => console.error('Error receiving data', err))
       .on('end', () => log('Storage sync complete.', 'g'))
-    this.writer.on('drain', () => this.writeDrain())
+    this.writer.on('drain', () => this.controlWriteFlow())
   }
 
-  writeDrain() {
+  controlWriteFlow() {
     this.isFlushing = false
     !this.queue.length ? this.emit('drain') : this.flushHandler()
   }
@@ -60,37 +60,26 @@ export default class Storage extends EventEmitter {
   flushToStorage() {
     const length = this.queue.length
     let chunkLength = 0
-    let dataStr = ``
+    let entry = ``
     let key
-    let cbs = []
     this.isFlushing = true
     for (let i = 0; i < length; i++) {
       key = this.queue[i]
-      if (Array.isArray(key)) {
-        cbs.push(key[1])
-        key = key[0]
-      }
-      dataStr += `{${key}: ${this.docs.get(key)}}\n`
+      entry += `{${key}: ${this.docs.get(key)}}\n`
       chunkLength++
       if (chunkLength < this.writerPack && i < length - 1) continue
-      this.initFlush(cbs, dataStr)
-      dataStr = ''
+      this.initFlush(entry)
+      entry = ''
       chunkLength = 0
-      cbs = []
     }
     this.queue = []
   }
 
-  initFlush(cbs, data) {
+  initFlush(data) {
     const isDrained = this.writer.write(data, err => {
       if (isDrained) {
-        this.writeDrain()
+        this.controlWriteFlow()
       }
-      if (!cbs.length && err) {
-        this.emit('error', err)
-        return
-      }
-      this.handleCallbacks(err, cbs)
     })
   }
 
@@ -108,12 +97,6 @@ export default class Storage extends EventEmitter {
       this.updateInmemory(line)
       return
     })
-  }
-
-  handleCallbacks(err, cbs) {
-    while (cbs.length) {
-      cbs.shift()(err)
-    }
   }
 
   updateInmemory(data) {

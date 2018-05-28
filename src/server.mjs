@@ -8,12 +8,13 @@ const numCPUs = os.cpus().length
 const database = new Storage() // Can pass fileName, optional.
 
 setTimeout(() => {
-  database.setItem('a', 15)
-  database.setItem('b', 2)
-  database.setItem('c', 3)
+  // database.setItem('a', 15)
+  // database.setItem('b', 2)
+  // database.setItem('c', 3)
   database.setItem('abc', 6)
 
-  console.log('key: abc', 'value', database.getItem('abc'))
+  // console.log('key: abc', 'value', database.getItem('abc'))
+  // database.removeItem('c')
   console.log('All data', database.docs)
 }, 200)
 
